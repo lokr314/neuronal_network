@@ -1,3 +1,5 @@
+use rand::distributions::{Distribution, Uniform};
+
 use crate::activating_functions::sigmoid;
 
 #[derive(Debug)]
@@ -11,6 +13,31 @@ impl NeuronalNetwork {
 
         for i in 1..layout.len() {
             layers.push(Layer::new(layout[i - 1], layout[i]));
+        }
+
+        NeuronalNetwork { layers }
+    }
+
+    pub fn new_random(layout: Vec<u16>) -> Self {
+        let mut layers = Vec::with_capacity(layout.len() - 1);
+
+        let mut rng = rand::thread_rng();
+        let range = Uniform::from(-1.0..1.0);
+
+        for i in 1..layout.len() {
+            let mut layer = Layer::new(layout[i - 1], layout[i]);
+
+            for neuron_weights in &mut layer.weights {
+                for weight in neuron_weights {
+                    *weight = range.sample(&mut rng);
+                }
+            }
+
+            for bias in &mut layer.biases {
+                *bias = range.sample(&mut rng);
+            }
+
+            layers.push(layer);
         }
 
         NeuronalNetwork { layers }
@@ -30,18 +57,19 @@ impl NeuronalNetwork {
     }
 
     //Output funktion fehlt
-    pub fn feed_forward(&self, mut input: Vec<f32>) -> Vec<f32> {
-        for layer in &self.layers {
-            input = layer.feed_forward(input);
+    pub fn feed_forward(&self, input: Vec<f32>) -> Vec<f32> {
+        let mut input = input;
+        for layer in 0..self.layers.len() - 1 {
+            input = self.layers[layer].feed_forward(input);
         }
-        input
+        self.layers.last().unwrap().feed_output(input)
     }
 
     pub fn calculate_loss(&self, inputs: Vec<f32>, targets: Vec<f32>) -> f32 {
         let predictions = self.feed_forward(inputs);
         let mut sum = 0.0;
-        for (pred, target) in predictions.iter().zip(targets.iter()) {
-            sum += (pred - target).powi(2);
+        for i in 0..predictions.len() {
+            sum += (predictions[i] - targets[i]).powi(2);
         }
         sum / predictions.len() as f32
     }
@@ -64,17 +92,33 @@ impl Layer {
         Layer { weights, biases }
     }
 
-    pub fn feed_forward(&self, inputs: Vec<f32>) -> Vec<f32> {
+    pub fn feed_forward(&self, input: Vec<f32>) -> Vec<f32> {
         let mut output = Vec::with_capacity(self.weights.len());
 
         for neuron in 0..self.weights.len() {
             let mut neuron_output = self.biases[neuron];
 
             for weight in 0..self.weights[0].len() {
-                neuron_output += inputs[weight] * self.weights[neuron][weight];
+                neuron_output += input[weight] * self.weights[neuron][weight];
             }
 
             output.push(sigmoid(neuron_output));
+        }
+
+        output
+    }
+
+    pub fn feed_output(&self, input: Vec<f32>) -> Vec<f32> {
+        let mut output = Vec::with_capacity(self.weights.len());
+
+        for neuron in 0..self.weights.len() {
+            let mut neuron_output = self.biases[neuron];
+
+            for weight in 0..self.weights[0].len() {
+                neuron_output += input[weight] * self.weights[neuron][weight];
+            }
+
+            output.push(neuron_output);
         }
 
         output

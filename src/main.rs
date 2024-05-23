@@ -9,18 +9,35 @@ use rand::Rng;
 
 
 fn main() {
-    let start_time = std::time::Instant::now();
-    let layout = vec![1, 20, 1];
-    let mut nn = NeuronalNetwork::new(layout);
+    let layout = vec![1, 10, 1];
+    let mut nn = NeuronalNetwork::new_random(layout);
     let mut rng = rand::thread_rng();
-    let mut loss = 0.0;
+    let mut loss = nn.train_with_random_changes(vec![0.0], vec![0.0], 1.0, 20);
 
-    for _ in 0..1000000000 {
-        let random_number: f32 = rng.gen_range(-1.0..1.0);
-        let sin = random_number.sin();
-        loss = 0.999 * loss + 0.001 * nn.train_with_random_changes(vec![random_number], vec![sin], 0.0001, 20);
+    for _ in 0..1_000_000_0 {
+        let random_number: f32 = rng.gen_range(-10..10) as f32 / 10.0;
+        let target = {
+            if random_number < 0.3 && random_number > -0.3 {
+                0.0
+            } else {
+                1.0
+            }
+        };
+        loss = 0.95 * loss + 0.05 * nn.train_with_random_changes(vec![random_number], vec![target], 0.1, 20);
         print!("\r{}", loss);
     }
 
-    println!("{:?} : {:?}", nn.get_layout(), start_time.elapsed());
+
+    print!("\n");
+    for _ in 0..10 {
+        let random_number: f32 = rng.gen_range(-10..10) as f32 / 10.0;
+        let target = {
+            if random_number < 0.3 && random_number > -0.3 {
+                0.0
+            } else {
+                1.0
+            }
+        };
+        println!("value: {}, target: {}, NN: {}", random_number, target, nn.feed_forward(vec![random_number])[0]);
+    }
 }
