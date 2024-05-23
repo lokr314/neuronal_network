@@ -4,7 +4,6 @@ use std::fmt::Debug;
 
 #[derive(Debug)]
 pub struct NeuronalNetwork {
-    pub layout: Vec<u16>,
     layers: Vec<Layer>
 }
 
@@ -16,7 +15,7 @@ impl NeuronalNetwork {
             layers.push(Layer::new(layout[i - 1], layout[i]));
         }
 
-        NeuronalNetwork { layout, layers }
+        NeuronalNetwork { layers }
     }
 }
 
