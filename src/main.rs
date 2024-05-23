@@ -7,5 +7,5 @@ fn main() {
     let v = vec![2, 3, 3, 5, 2];
     let k = NeuronalNetwork::new(v);
 
-    println!("{:?}", k);
+    println!("{:?}", k.get_layout());
 }

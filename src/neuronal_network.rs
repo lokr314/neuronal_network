@@ -1,4 +1,4 @@
-use std::fmt::Debug;
+use std::{alloc::Layout, fmt::Debug, mem::size_of_val};
 
 
 
@@ -17,11 +17,25 @@ impl NeuronalNetwork {
 
         NeuronalNetwork { layers }
     }
+
+    pub fn get_layout(&self) -> Vec<usize> {
+
+        //Der input layer ist nicht in layers vorhanden
+        let mut layout = Vec::with_capacity(self.layers.len() + 1);
+        layout.push(self.layers[0].weights[0].len());
+
+        //Für jede weitere schicht wird die anzahl der neuronen genommen
+        for layer in &self.layers {
+            layout.push(layer.weights.len());
+        }
+        layout
+    }
 }
 
 
 #[derive(Debug)]
 struct Layer {
+    //[neuronen[connections]]
     weights: Vec<Vec<f32>>,
     biases: Vec<f32>
 }
