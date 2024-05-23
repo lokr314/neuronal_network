@@ -14,7 +14,7 @@
 - Datenstruktur
 
 ### Test
-
+- Tests die alle methoden von NeuronalNetwork testen
 
 ### Dokumentation
 
