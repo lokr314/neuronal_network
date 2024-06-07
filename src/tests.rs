@@ -1,7 +1,7 @@
 #[allow(unused_imports)]
 mod tests {
 
-    use crate::{NeuronalNetwork};
+    use crate::{NeuronalNetwork, activating_functions};
 
     //NeuronalNetwork
     //Diese test function werden nicht bei einem normale compilen mit compiled sonder nur wenn man die teste ausführt
@@ -16,5 +16,13 @@ mod tests {
     fn random_init() {
         let neuronal_network = NeuronalNetwork::new_random(vec![2, 3, 3, 2]);
         println!("{:?}", neuronal_network);
+    }
+
+    #[test]
+    fn softmax() {
+        let input = vec![1.0, 1.0, 2.0, 1.0, 1.0];
+    
+        let result = activating_functions::softmax(&input);
+        println!("{:?}", result);
     }
 }
