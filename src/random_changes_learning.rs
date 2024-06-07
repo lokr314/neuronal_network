@@ -1,10 +1,12 @@
 use crate::neuronal_network::NeuronalNetwork;
 use rand::Rng;
+use crate::loss_functions::mean_squared_error;
 
 impl NeuronalNetwork {
     //Sehr inefficiente training funktion die auch sehr ineffectiv ist
     pub fn train_with_random_changes(&mut self, inputs: Vec<f32>, targets: Vec<f32>, learning_rate: f32, iterations: usize) -> f32 {
-        let mut current_loss = self.calculate_loss(inputs.clone(), targets.clone());
+        let prediction = self.feed_forward(inputs.clone());
+        let mut current_loss = mean_squared_error(prediction, targets.clone());
         
         let mut rng = rand::thread_rng();
 
@@ -22,8 +24,9 @@ impl NeuronalNetwork {
             }
             self.layers[random_layer].biases[random_neuron] += rng.gen_range(-learning_rate..learning_rate) * 0.01;
 
-            // Berechne den neuen Verlust
-            let new_loss = self.calculate_loss(inputs.clone(), targets.clone());
+            // Berechne den neuen Verlust#
+            let new_predictions = self.feed_forward(inputs.clone());
+            let new_loss = mean_squared_error(new_predictions, targets.clone());
 
             // Wenn der neue Verlust besser ist, akzeptiere die Änderungen
             // Wenn nicht, setze die ursprünglichen Gewichte und Biases zurück
@@ -33,6 +36,7 @@ impl NeuronalNetwork {
                 self.layers[random_layer].weights[random_neuron] = saved_neuron;
                 self.layers[random_layer].biases[random_neuron] = saved_bias;
             }
+            //println!("current_loss: {}", current_loss);
         }
 
         current_loss

@@ -1,6 +1,6 @@
-use rand::distributions::{Distribution, Uniform};
+use rand::Rng;
 
-use crate::activating_functions::sigmoid;
+use crate::activating_functions::leaky_relu;
 
 #[derive(Debug)]
 pub struct NeuronalNetwork {
@@ -10,36 +10,17 @@ pub struct NeuronalNetwork {
 impl NeuronalNetwork {
     pub fn new(layout: Vec<u16>) -> Self {
         let mut layers = Vec::with_capacity(layout.len() - 1);
-
         for i in 1..layout.len() {
             layers.push(Layer::new(layout[i - 1], layout[i]));
         }
-
         NeuronalNetwork { layers }
     }
 
     pub fn new_random(layout: Vec<u16>) -> Self {
         let mut layers = Vec::with_capacity(layout.len() - 1);
-
-        let mut rng = rand::thread_rng();
-        let range = Uniform::from(-1.0..1.0);
-
         for i in 1..layout.len() {
-            let mut layer = Layer::new(layout[i - 1], layout[i]);
-
-            for neuron_weights in &mut layer.weights {
-                for weight in neuron_weights {
-                    *weight = range.sample(&mut rng);
-                }
-            }
-
-            for bias in &mut layer.biases {
-                *bias = range.sample(&mut rng);
-            }
-
-            layers.push(layer);
+            layers.push(Layer::new_random(layout[i - 1], layout[i]));
         }
-
         NeuronalNetwork { layers }
     }
 
@@ -60,18 +41,26 @@ impl NeuronalNetwork {
     pub fn feed_forward(&self, input: Vec<f32>) -> Vec<f32> {
         let mut input = input;
         for layer in 0..self.layers.len() - 1 {
-            input = self.layers[layer].feed_forward(input);
+            input = self.layers[layer].feed_forward(&input);
         }
-        self.layers.last().unwrap().feed_output(input)
+        self.layers.last().unwrap().feed_output(&input)
     }
 
-    pub fn calculate_loss(&self, inputs: Vec<f32>, targets: Vec<f32>) -> f32 {
-        let predictions = self.feed_forward(inputs);
-        let mut sum = 0.0;
-        for i in 0..predictions.len() {
-            sum += (predictions[i] - targets[i]).powi(2);
+    pub fn test(&self, inputs: Vec<f32>, targets: Vec<f32>) -> (f32, bool) {
+        let output = self.feed_forward(inputs);
+        let mut error = 0.0;
+        for i in 0..output.len() {
+            error += (output[i] - targets[i]).powi(2);
         }
-        sum / predictions.len() as f32
+        let mut greatest_i = 0.0;
+        let mut index = 0;
+        for i in 0..output.len() {
+            if output[i] > greatest_i {
+                greatest_i = output[i];
+                index = i;
+            }
+        }
+        (error / output.len() as f32, targets[index] == 1.0)
     }
 
 }
@@ -92,7 +81,16 @@ impl Layer {
         Layer { weights, biases }
     }
 
-    pub fn feed_forward(&self, input: Vec<f32>) -> Vec<f32> {
+    pub fn new_random(inputs: u16, neurons: u16) -> Self {
+        let mut rng = rand::thread_rng();
+        let weights: Vec<Vec<f32>> = (0..neurons)
+            .map(|_| (0..inputs).map(|_| rng.gen_range(-1.0..1.0)).collect())
+            .collect();
+        let biases: Vec<f32> = (0..neurons).map(|_| rng.gen_range(-1.0..1.0)).collect();
+        Layer { weights, biases }
+    }
+
+    pub fn feed_forward(&self, input: &[f32]) -> Vec<f32> {
         let mut output = Vec::with_capacity(self.weights.len());
 
         for neuron in 0..self.weights.len() {
@@ -102,13 +100,13 @@ impl Layer {
                 neuron_output += input[weight] * self.weights[neuron][weight];
             }
 
-            output.push(sigmoid(neuron_output));
+            output.push(leaky_relu(neuron_output));
         }
 
         output
     }
 
-    pub fn feed_output(&self, input: Vec<f32>) -> Vec<f32> {
+    pub fn feed_output(&self, input: &[f32]) -> Vec<f32> {
         let mut output = Vec::with_capacity(self.weights.len());
 
         for neuron in 0..self.weights.len() {
@@ -118,7 +116,7 @@ impl Layer {
                 neuron_output += input[weight] * self.weights[neuron][weight];
             }
 
-            output.push(neuron_output);
+            output.push(neuron_output.min(1.0));
         }
 
         output
