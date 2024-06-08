@@ -1,6 +1,6 @@
 use rand::Rng;
 
-use crate::activating_functions::leaky_relu;
+use crate::activating_functions::{self, softmax};
 
 #[derive(Debug)]
 pub struct NeuronalNetwork {
@@ -37,20 +37,19 @@ impl NeuronalNetwork {
         layout
     }
 
-    //Output funktion fehlt
     pub fn feed_forward(&self, input: Vec<f32>) -> Vec<f32> {
         let mut input = input;
         for layer in 0..self.layers.len() - 1 {
-            input = self.layers[layer].feed_forward(&input);
+            (_, input) = self.layers[layer].feed_forward(&input);
         }
-        self.layers.last().unwrap().feed_output(&input)
+        self.layers[self.layers.len() - 1].feed_output(&input)
     }
 
     pub fn test(&self, inputs: Vec<f32>, targets: Vec<f32>) -> (f32, bool) {
         let output = self.feed_forward(inputs);
         let mut error = 0.0;
         for i in 0..output.len() {
-            error += (output[i] - targets[i]).powi(2);
+            error += targets[i].abs() - output[i];
         }
         let mut greatest_i = 0.0;
         let mut index = 0;
@@ -60,7 +59,26 @@ impl NeuronalNetwork {
                 index = i;
             }
         }
-        (error / output.len() as f32, targets[index] == 1.0)
+        (error.abs(), targets[index] == 1.0)
+    }
+    pub fn forward_propagation(&self, input: &Vec<f32>) -> (Vec<Vec<f32>>, Vec<Vec<f32>>) {
+        let mut activations = Vec::with_capacity(self.layers.len() + 1);
+        activations.push(input.clone());
+        let mut zs = Vec::with_capacity(self.layers.len());
+
+        let mut activation = input.clone();
+        for layer in 0..self.layers.len() - 1 {
+            let (z, layer_output) = self.layers[layer].feed_forward(&activation);
+            zs.push(z);
+            activation = layer_output.clone();
+            activations.push(layer_output);
+        }
+
+        let output_z = self.layers[self.layers.len() - 1].feed_output(&activation);
+        let output_activations = softmax(&output_z);
+        activations.push(output_activations);
+
+        (activations, zs)
     }
 
 }
@@ -90,20 +108,15 @@ impl Layer {
         Layer { weights, biases }
     }
 
-    pub fn feed_forward(&self, input: &[f32]) -> Vec<f32> {
-        let mut output = Vec::with_capacity(self.weights.len());
+    pub fn feed_forward(&self, inputs: &[f32]) -> (Vec<f32>, Vec<f32>) {
+        let mut z = vec![0.0; self.weights.len()];
+        let mut activations = vec![0.0; self.weights.len()];
 
-        for neuron in 0..self.weights.len() {
-            let mut neuron_output = self.biases[neuron];
-
-            for weight in 0..self.weights[0].len() {
-                neuron_output += input[weight] * self.weights[neuron][weight];
-            }
-
-            output.push(leaky_relu(neuron_output));
+        for (i, weight_row) in self.weights.iter().enumerate() {
+            z[i] = weight_row.iter().zip(inputs.iter()).map(|(w, &i)| w * i).sum::<f32>() + self.biases[i];
+            activations[i] = activating_functions::sigmoid(z[i]);
         }
-
-        output
+        (z, activations)
     }
 
     pub fn feed_output(&self, input: &[f32]) -> Vec<f32> {
@@ -116,9 +129,8 @@ impl Layer {
                 neuron_output += input[weight] * self.weights[neuron][weight];
             }
 
-            output.push(neuron_output.min(1.0));
+            output.push(neuron_output);
         }
-
         output
     }
 }
