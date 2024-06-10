@@ -45,7 +45,8 @@ fn main() {
 }
 
 fn load_mnist() -> (Vec<f32>, Vec<u8>, Vec<f32>, Vec<u8>) {
-    let mnist = Mnist::new("C:/Users/Uwe Kuhlmann/Desktop/Datasets/MNIST/");
+    // let mnist = Mnist::new("C:/Users/Uwe Kuhlmann/Desktop/Datasets/MNIST/");
+    let mnist = Mnist::new("MNIST/");
 
     let images = mnist.train_data.into_iter().flatten().map(|x| x as f32 / 256.0).collect::<Vec<f32>>();
     let labels = mnist.train_labels;
