@@ -4,7 +4,7 @@ use std::rc::Rc;
 
 use crate::NeuronalNetwork;
 use crate::neuronal_network::Layer;
-use crate::activating_functions::sigmoid_derivative;
+use crate::activating_functions::{leaky_relu_derivative, relu_derivative, sigmoid_derivative};
 
 
 impl NeuronalNetwork {
@@ -46,7 +46,7 @@ impl NeuronalNetwork {
                 for l in (0..self.layers.len() - 1).rev() {
                     let mut new_delta = vec![0.0; self.layers[l].weights.len()];
                     let next_layer = &self.layers[l + 1];
-                    let sp: Vec<f32> = zs[l].iter().map(|&z| sigmoid_derivative(z)).collect();
+                    let sp: Vec<f32> = zs[l].iter().map(|&z| relu_derivative(z)).collect();
 
                     for i in 0..self.layers[l].weights.len() {
                         let mut error = 0.0;
@@ -66,9 +66,9 @@ impl NeuronalNetwork {
             for l in 0..self.layers.len() - 1 {
                 for n in 0..self.layers[l].weights.len() {
                     for c in 0..self.layers[l].weights[n].len() {
-                        self.layers[l].weights[n][c] -= learning_rate * weight_gradients[l][n][c] /  self.layers[l + 1].weights[0].len() as f32;
+                        self.layers[l].weights[n][c] -= learning_rate * weight_gradients[l][n][c];
                     }
-                    self.layers[l].biases[n] -= learning_rate * bias_gradients[l][n] / self.layers[l].weights[n].len() as f32;
+                    self.layers[l].biases[n] -= learning_rate * bias_gradients[l][n];
                 }
             }
 

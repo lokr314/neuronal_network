@@ -6,7 +6,7 @@ pub fn leaky_relu_derivative(x: f32) -> f32 {
     if x > 0.0 { x } else { 0.01 }
 }
 pub fn relu(x: f32) -> f32 {
-    if x >= 0.0 { x } else { 0.0 }
+    x.max(0.0)
 }
 pub fn relu_derivative(z: f32) -> f32 {
     if z > 0.0 { 1.0 } else { 0.0 }
@@ -41,20 +41,28 @@ pub fn softmax(input: &[f32]) -> Vec<f32> {
     exps.iter().map(|&exp| exp / sum_exps).collect()
 }
 
-pub fn softmax_derivative(input: &[f32]) -> Vec<Vec<f32>> {
-    let s = softmax(input);
-    let n = s.len();
-    let mut jacobian = vec![vec![0.0; n]; n];
+pub fn softbest(input: &[f32]) -> Vec<f32> {
+    // Berechne den maximalen Wert im Vektor (zur numerischen Stabilisierung)
+    let mut max_value = 0.0;
 
-    for i in 0..n {
-        for j in 0..n {
-            if i == j {
-                jacobian[i][j] = s[i] * (1.0 - s[j]);
-            } else {
-                jacobian[i][j] = -s[i] * s[j];
+    for i in 0..input.len() {
+        if !input[i].is_nan() {
+            if input[i].abs() > max_value {
+                max_value = input[i];
             }
         }
     }
+    
+    // Berechne die exponentiellen Werte und deren Summe
+    let exps: Vec<f32> = input.iter().map(|&x| expi(x - max_value)).collect();
+    let sum_exps: f32 = exps.iter().sum();
+    
+    // Teile jeden exponentiellen Wert durch die Summe der exponentiellen Werte
+    let softmax: Vec<f32> = exps.iter().map(|&exp| exp / sum_exps).collect();
+    let mean = softmax.iter().copied().sum::<f32>() / softmax.len() as f32;
+    softmax.iter().map(|&value| value - mean).collect()
+}
 
-    jacobian
+fn expi(x: f32) -> f32 {
+    std::f32::consts::E.powf(x) * x.signum()
 }

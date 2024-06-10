@@ -5,7 +5,7 @@ pub mod random_changes_learning;
 pub mod backpropagation;
 pub mod loss_functions;
 
-use std::{io::Write, rc::Rc};
+use std::{fs::{self, File}, io::{Read, Write}, rc::Rc};
 
 use neuronal_network::NeuronalNetwork;
 
@@ -17,12 +17,12 @@ fn main() {
     // Lade das MNIST-Datenset
     let (trn_img, trn_lbl, test_img, test_lbl) = load_mnist();
 
-    let layout = vec![784, 20, 10];
+    let layout = vec![784, 48, 10];
     let mut neural_network = NeuronalNetwork::new_random(layout.clone());
 
-    let epochs = 1000;
+    let epochs = 30;
     let learning_rate = 0.01;
-    let batch_size = 10;
+    let batch_size = 20;
 
     let mut input_vec = Vec::with_capacity(test_img.len() / 784);
     let mut target_vec = Vec::with_capacity(trn_lbl.len());
@@ -39,19 +39,54 @@ fn main() {
         neural_network.train(inputs.clone(), targets.clone(), learning_rate, batch_size);
 
         let mut correct_c: u32 = 0;
-        let mut total_loss = 0.0;
         for i in 0..test_img.len() / 784 {
             let inputs = &test_img[i * 784..(i + 1) * 784];
             let targets = one_hot_encoding(test_lbl[i] as usize, 10);
-            let (loss, correct) = neural_network.test(inputs.to_vec(), targets);
-            total_loss = total_loss * 0.95 + 0.05 * loss;
+            let (_, correct) = neural_network.test(inputs.to_vec(), targets);
             if correct {
                 correct_c += 1;
             }
         }
-        total_loss /= test_img.len() as f32;
-        println!("Loss: {}, Accuracy: {:.2}%", total_loss, (correct_c as f32 / (test_img.len() / 784) as f32) * 100.);
+        println!("Accuracy: {:.2}%", (correct_c as f32 / (test_img.len() / 784) as f32) * 100.);
         std::io::stdout().flush().unwrap();
+    }
+
+    loop {
+        let mut eingabe = String::new();
+        match std::io::stdin().read_line(&mut eingabe) {
+            Ok(_) =>(),
+            Err(_) => {
+                println!("Failed to read!");
+                continue;
+            },
+        }
+
+        let decoder = png::Decoder::new(File::open(eingabe.replace("\"", "").trim()).unwrap());
+        let mut reader = decoder.read_info().unwrap();
+        let mut buf = vec![0; reader.output_buffer_size()];
+
+        let info = reader.next_frame(&mut buf).unwrap();
+
+        if info.height != 28 || info.width != 28 {
+            println!("Wrong dimension!");
+            continue;
+        } else if info.color_type != png::ColorType::Grayscale || info.bit_depth != png::BitDepth::Eight {
+            println!("Wrong color format!");
+            continue;
+        }
+
+        let nn_prediction = neural_network.feed_forward(buf.iter().map(|x| *x as f32 / 256.0).collect());
+
+        let mut greates_v = 0.0;
+        let mut index = 0;
+        for i in 0..nn_prediction.len() {
+            if nn_prediction[i] > greates_v {
+                greates_v = nn_prediction[i];
+                index = i;
+            }
+        }
+        println!("prediction: {}, confidents: {:.4}", index, greates_v);
+
     }
 
 }

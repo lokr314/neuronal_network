@@ -20,11 +20,10 @@ mod tests {
 
     #[test]
     fn softmax() {
-        let input = vec![1.0, 1.0, 2.0, 1.0, 1.0];
+        let input = vec![2.0 ,-2.0];
     
-        let result = activating_functions::softmax(&input);
+        let result = activating_functions::softbest(&input);
         println!("{:?}", result);
-        println!("{:?}", activating_functions::softmax_derivative(&result))
     }
 
     #[test]

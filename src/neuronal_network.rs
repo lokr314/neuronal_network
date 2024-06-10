@@ -1,6 +1,6 @@
 use rand::Rng;
 
-use crate::activating_functions::{self, softmax};
+use crate::activating_functions::{self, softbest, softmax};
 
 #[derive(Debug)]
 pub struct NeuronalNetwork {
@@ -42,7 +42,7 @@ impl NeuronalNetwork {
         for layer in 0..self.layers.len() - 1 {
             (_, input) = self.layers[layer].feed_forward(&input);
         }
-        self.layers[self.layers.len() - 1].feed_output(&input)
+        softmax(&self.layers[self.layers.len() - 1].feed_output(&input))
     }
 
     pub fn test(&self, inputs: Vec<f32>, targets: Vec<f32>) -> (f32, bool) {
@@ -75,8 +75,7 @@ impl NeuronalNetwork {
         }
 
         let output_z = self.layers[self.layers.len() - 1].feed_output(&activation);
-        let output_activations = softmax(&output_z);
-        activations.push(output_activations);
+        activations.push(softmax(&output_z));
 
         (activations, zs)
     }
@@ -114,7 +113,7 @@ impl Layer {
 
         for (i, weight_row) in self.weights.iter().enumerate() {
             z[i] = weight_row.iter().zip(inputs.iter()).map(|(w, &i)| w * i).sum::<f32>() + self.biases[i];
-            activations[i] = activating_functions::sigmoid(z[i]);
+            activations[i] = activating_functions::relu(z[i]);
         }
         (z, activations)
     }
