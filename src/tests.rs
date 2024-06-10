@@ -24,5 +24,12 @@ mod tests {
     
         let result = activating_functions::softmax(&input);
         println!("{:?}", result);
+        println!("{:?}", activating_functions::softmax_derivative(&result))
+    }
+
+    #[test]
+    fn backpropagation() {
+        let layout = vec![2, 3, 2];
+        
     }
 }
